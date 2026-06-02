@@ -72,3 +72,36 @@ def show_results(results):
             "Unidades en sistema",
             results["FINAL_INVENTORY"]
         )
+
+    mean_test = results["MEAN_TEST"]
+
+    st.subheader("🧪 Prueba de los promedios")
+
+    col7, col8, col9 = st.columns(3)
+
+    with col7:
+        st.metric(
+            "Promedio muestral",
+            f"{mean_test['SAMPLE_MEAN']:.4f}"
+        )
+
+    with col8:
+        st.metric(
+            "Z calculado",
+            f"{mean_test['Z_STATISTIC']:.4f}"
+        )
+
+    with col9:
+        st.metric(
+            "Z crítico",
+            f"{mean_test['CRITICAL_VALUE']:.4f}"
+        )
+
+    if mean_test["REJECT_NULL"]:
+        st.error(
+            f"{mean_test['DECISION']}: el generador no pasa la prueba con α = {mean_test['ALPHA']}."
+        )
+    else:
+        st.success(
+            f"{mean_test['DECISION']}: el generador pasa la prueba con α = {mean_test['ALPHA']}."
+        )

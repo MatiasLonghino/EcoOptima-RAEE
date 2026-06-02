@@ -5,6 +5,7 @@ from simulation.entities import Monitor
 from simulation.stores import PlantStores
 from simulation.statistics import Statistics
 from simulation.model import PlantModel
+from simulation.statistical_tests import run_mean_test
 
 
 class Simulator:
@@ -19,6 +20,13 @@ class Simulator:
         # Inicializa el objeto donde se guardarán las estadísticas
         stats = Statistics()
 
+        rng = np.random.default_rng(self.config.random_seed)
+
+        mean_test = run_mean_test(
+            rng.random(self.config.mean_test_sample_size),
+            self.config.mean_test_alpha
+        )
+
         # Crea el entorno de simulación de SimPy
         env = simpy.Environment()
 
@@ -29,7 +37,7 @@ class Simulator:
         # Importante:
         # Se asume que PlantModel inicia internamente los procesos
         # de triage, CRT y LCD.
-        model = PlantModel(
+        PlantModel(
             env,
             stores,
             self.config,
@@ -65,13 +73,13 @@ class Simulator:
         # SIMULACIÓN DÍA POR DÍA
         # ---------------------------------------------------------
 
-        for day in range(self.config.days):
+        for _ in range(self.config.days):
 
             # -----------------------------------------------------
             # 1. GENERACIÓN DE LLEGADAS DIARIAS
             # -----------------------------------------------------
 
-            arrivals = np.random.poisson(
+            arrivals = rng.poisson(
                 self.config.arrival_lambda
             )
 
@@ -207,6 +215,26 @@ class Simulator:
         )
 
         return {
+
+            # Resultado de la prueba de los promedios
+            "MEAN_TEST": {
+                "SAMPLE_SIZE": mean_test.sample_size,
+                "SAMPLE_MEAN": round(
+                    mean_test.sample_mean,
+                    4
+                ),
+                "Z_STATISTIC": round(
+                    mean_test.z_statistic,
+                    4
+                ),
+                "CRITICAL_VALUE": round(
+                    mean_test.critical_value,
+                    4
+                ),
+                "ALPHA": mean_test.alpha,
+                "REJECT_NULL": mean_test.reject_null,
+                "DECISION": mean_test.decision,
+            },
 
             # Total de CRT procesados
             "CRT":

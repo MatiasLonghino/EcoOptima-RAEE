@@ -131,6 +131,23 @@ def build_sidebar():
             step=100.0
         )
 
+        st.divider()
+
+        st.markdown("### Prueba de los promedios")
+
+        mean_test_sample_size = st.number_input(
+            "Tamaño de muestra",
+            min_value=5,
+            value=30,
+            step=1
+        )
+
+        mean_test_alpha = st.selectbox(
+            "Nivel de significancia",
+            options=[0.10, 0.05, 0.01],
+            index=1
+        )
+
     return SimulationConfig(
         days=days,
         inventory_capacity=inventory_capacity,
@@ -144,5 +161,7 @@ def build_sidebar():
         overtime_minutes=overtime_minutes,
         employee_daily_cost=employee_daily_cost,
         crt_cost=crt_cost,
-        lcd_cost=lcd_cost
+        lcd_cost=lcd_cost,
+        mean_test_sample_size=mean_test_sample_size,
+        mean_test_alpha=mean_test_alpha
     )

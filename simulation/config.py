@@ -29,3 +29,9 @@ class SimulationConfig:
     crt_cost: float = 1500
 
     lcd_cost: float = 800
+
+    mean_test_sample_size: int = 30
+
+    mean_test_alpha: float = 0.05
+
+    random_seed: int = 12345
