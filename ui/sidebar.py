@@ -133,6 +133,106 @@ def build_sidebar():
 
         st.divider()
 
+        st.markdown("### Generador propio")
+
+        random_generator_method = st.selectbox(
+            "Método de generación",
+            options=[
+                "lehmer",
+                "mixto",
+                "multiplicativo",
+                "aditivo",
+                "middle_square",
+            ],
+            index=0
+        )
+
+        random_seed = st.number_input(
+            "Semilla",
+            min_value=1,
+            value=12345,
+            step=1
+        )
+
+        lehmer_multiplier = st.number_input(
+            "Multiplicador Lehmer",
+            min_value=1,
+            value=48271,
+            step=1
+        )
+
+        generator_increment = st.number_input(
+            "Incremento mixto",
+            min_value=0,
+            value=0,
+            step=1
+        )
+
+        generator_modulus = st.number_input(
+            "Módulo",
+            min_value=1,
+            value=2147483647,
+            step=1
+        )
+
+        middle_square_seed = st.number_input(
+            "Semilla cuadrado medio",
+            min_value=1,
+            value=1234,
+            step=1
+        )
+
+        middle_square_digits = st.number_input(
+            "Dígitos cuadrado medio",
+            min_value=1,
+            value=4,
+            step=1
+        )
+
+        additive_seed_1 = st.number_input(
+            "Semilla aditiva 1",
+            min_value=1,
+            value=1942,
+            step=1
+        )
+
+        additive_seed_2 = st.number_input(
+            "Semilla aditiva 2",
+            min_value=1,
+            value=2372,
+            step=1
+        )
+
+        additive_seed_3 = st.number_input(
+            "Semilla aditiva 3",
+            min_value=1,
+            value=5131,
+            step=1
+        )
+
+        additive_seed_4 = st.number_input(
+            "Semilla aditiva 4",
+            min_value=1,
+            value=3317,
+            step=1
+        )
+
+        additive_lag_a = st.number_input(
+            "Retardo aditivo A",
+            min_value=1,
+            value=1,
+            step=1
+        )
+
+        additive_lag_b = st.number_input(
+            "Retardo aditivo B",
+            min_value=1,
+            value=4,
+            step=1
+        )
+
+        st.divider()
+
         st.markdown("### Prueba de los promedios")
 
         mean_test_sample_size = st.number_input(
@@ -162,6 +262,19 @@ def build_sidebar():
         employee_daily_cost=employee_daily_cost,
         crt_cost=crt_cost,
         lcd_cost=lcd_cost,
+        generator_method=random_generator_method,
+        random_seed=random_seed,
+        generator_multiplier=lehmer_multiplier,
+        generator_increment=generator_increment,
+        generator_modulus=generator_modulus,
+        middle_square_seed=middle_square_seed,
+        middle_square_digits=middle_square_digits,
+        additive_seed_1=additive_seed_1,
+        additive_seed_2=additive_seed_2,
+        additive_seed_3=additive_seed_3,
+        additive_seed_4=additive_seed_4,
+        additive_lag_a=additive_lag_a,
+        additive_lag_b=additive_lag_b,
         mean_test_sample_size=mean_test_sample_size,
         mean_test_alpha=mean_test_alpha
     )

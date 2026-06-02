@@ -1,10 +1,10 @@
 import simpy
-import numpy as np
 
 from simulation.entities import Monitor
 from simulation.stores import PlantStores
 from simulation.statistics import Statistics
 from simulation.model import PlantModel
+from simulation.random_manager import RandomManager
 from simulation.statistical_tests import run_mean_test
 
 
@@ -20,10 +20,13 @@ class Simulator:
         # Inicializa el objeto donde se guardarán las estadísticas
         stats = Statistics()
 
-        rng = np.random.default_rng(self.config.random_seed)
+        random_manager = RandomManager.from_config(self.config)
+        mean_test_manager = RandomManager.from_config(self.config)
 
         mean_test = run_mean_test(
-            rng.random(self.config.mean_test_sample_size),
+            mean_test_manager.uniform_generator.generate_many(
+                self.config.mean_test_sample_size
+            ),
             self.config.mean_test_alpha
         )
 
@@ -41,7 +44,8 @@ class Simulator:
             env,
             stores,
             self.config,
-            stats
+            stats,
+            random_manager,
         )
 
         # Identificador único para cada monitor
@@ -79,9 +83,7 @@ class Simulator:
             # 1. GENERACIÓN DE LLEGADAS DIARIAS
             # -----------------------------------------------------
 
-            arrivals = rng.poisson(
-                self.config.arrival_lambda
-            )
+            arrivals = random_manager.arrival_distribution.sample()
 
             # Agrega los monitores nuevos al inventario.
             # Nuevamente usamos put(), no append().

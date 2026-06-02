@@ -2,8 +2,6 @@ from dataclasses import dataclass
 from math import sqrt
 from statistics import NormalDist
 
-import numpy as np
-
 
 @dataclass(frozen=True)
 class MeanTestResult:
@@ -32,15 +30,18 @@ class MeanTestResult:
 
 def run_mean_test(sample, alpha=0.05):
 
-    sample_array = np.asarray(sample, dtype=float)
+    sample_list = [
+        float(value)
+        for value in sample
+    ]
 
-    sample_size = int(sample_array.size)
+    sample_size = len(sample_list)
 
     if sample_size == 0:
 
         raise ValueError("La muestra no puede estar vacía.")
 
-    sample_mean = float(sample_array.mean())
+    sample_mean = sum(sample_list) / sample_size
 
     z_statistic = (
         sample_mean - 0.5

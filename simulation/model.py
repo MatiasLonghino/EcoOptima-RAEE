@@ -1,4 +1,4 @@
-import numpy as np
+from simulation.random_manager import RandomManager
 
 class PlantModel:
 
@@ -7,13 +7,15 @@ class PlantModel:
         env,
         stores,
         config,
-        stats
+        stats,
+        random_manager: RandomManager,
     ):
 
         self.env = env
         self.stores = stores
         self.config = config
         self.stats = stats
+        self.random_manager = random_manager
 
         for _ in range(
             config.triage_servers
@@ -38,7 +40,7 @@ class PlantModel:
 
     def classify(self):
 
-        u = np.random.random()
+        u = self.random_manager.uniform_generator.next()
 
         if u <= 0.10:
             return "IRRECOVERABLE"
@@ -56,9 +58,8 @@ class PlantModel:
                 self.stores.inventory.get()
             )
 
-            triage_time = np.random.uniform(
-                10,
-                15
+            triage_time = (
+                self.random_manager.triage_time_distribution.sample()
             )
 
             yield self.env.timeout(
@@ -99,10 +100,7 @@ class PlantModel:
 
             process_time = max(
                 0,
-                np.random.normal(
-                    20,
-                    3
-                )
+                self.random_manager.crt_time_distribution.sample()
             )
 
             yield self.env.timeout(
@@ -127,10 +125,7 @@ class PlantModel:
 
             process_time = max(
                 0,
-                np.random.normal(
-                    37,
-                    4
-                )
+                self.random_manager.lcd_time_distribution.sample()
             )
 
             yield self.env.timeout(

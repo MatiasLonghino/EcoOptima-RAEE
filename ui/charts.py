@@ -27,7 +27,7 @@ def inventory_chart(results):
         df,
         x="Día",
         y="Unidades en depósito",
-        use_container_width=True
+        width="stretch"
     )
 
 
@@ -66,7 +66,7 @@ def processed_chart(results):
             "LCD procesados",
             "Irrecuperables procesados"
         ],
-        use_container_width=True
+        width="stretch"
     )
 
 
@@ -95,5 +95,5 @@ def cost_chart(results):
         df,
         x="Día",
         y="Costo acumulado",
-        use_container_width=True
+        width="stretch"
     )
