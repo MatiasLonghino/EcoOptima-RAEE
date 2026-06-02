@@ -14,7 +14,7 @@ class SimulationConfig:
 
     arrival_lambda: int = 45
 
-    triage_servers: int = 1
+    triage_servers: int = 2
 
     crt_servers: int = 1
 
