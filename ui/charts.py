@@ -21,12 +21,13 @@ def inventory_chart(results):
         "Unidades en depósito": inventory_history[:min_length]
     })
 
-    st.subheader("Evolución del inventario en depósito")
+    st.subheader("📈 Evolución del inventario en depósito")
 
     st.line_chart(
         df,
         x="Día",
-        y="Unidades en depósito"
+        y="Unidades en depósito",
+        use_container_width=True
     )
 
 
@@ -55,7 +56,7 @@ def processed_chart(results):
         "Irrecuperables procesados": irrecoverable_history[:min_length]
     })
 
-    st.subheader("Unidades procesadas acumuladas por tipo")
+    st.subheader("📦 Unidades procesadas acumuladas por tipo")
 
     st.line_chart(
         df,
@@ -64,7 +65,8 @@ def processed_chart(results):
             "CRT procesados",
             "LCD procesados",
             "Irrecuperables procesados"
-        ]
+        ],
+        use_container_width=True
     )
 
 
@@ -87,10 +89,11 @@ def cost_chart(results):
         "Costo acumulado": cost_history[:min_length]
     })
 
-    st.subheader("Evolución del costo acumulado")
+    st.subheader("💰 Evolución del costo acumulado")
 
     st.line_chart(
         df,
         x="Día",
-        y="Costo acumulado"
+        y="Costo acumulado",
+        use_container_width=True
     )
