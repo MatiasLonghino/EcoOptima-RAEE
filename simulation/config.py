@@ -8,7 +8,7 @@ class SimulationConfig:
 
     inventory_capacity: int = 300
 
-    threshold_percentage: float = 0.85
+    threshold_percentage: float = 0.7
 
     initial_inventory: int = 100
 
@@ -16,9 +16,9 @@ class SimulationConfig:
 
     triage_servers: int = 1
 
-    crt_servers: int = 2
+    crt_servers: int = 1
 
-    lcd_servers: int = 1
+    lcd_servers: int = 3
 
     workday_minutes: int = 480
 

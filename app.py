@@ -5,6 +5,11 @@ from ui.results import show_results
 
 from simulation.simulator import Simulator
 
+from ui.charts import (
+    inventory_chart,
+    processed_chart,
+    cost_chart
+)
 
 st.set_page_config(
     page_title="RAEE Simulator",
@@ -26,3 +31,16 @@ if st.button(
     results = simulator.run()
 
     show_results(results)
+    
+    inventory_chart(
+    results
+    )
+
+    processed_chart(
+    results
+    )
+
+    cost_chart(
+    results
+    )
+    
