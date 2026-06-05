@@ -231,59 +231,68 @@ class Simulator:
 
         return {
 
-            "CRT":
-                stats.processed_crt,
+    "CRT":
+        stats.processed_crt,
 
-            "LCD":
-                stats.processed_lcd,
+    "LCD":
+        stats.processed_lcd,
 
-            "IRRECOVERABLE":
-                stats.processed_irrecoverable,
+    "IRRECOVERABLE":
+        stats.processed_irrecoverable,
 
-            "FINAL_INVENTORY":
-                final_inventory,
+    "FINAL_INVENTORY":
+        final_inventory,
 
-            "AVG_INVENTORY":
-                round(
-                    stats.average_inventory(),
-                    2
-                ),
+    "AVG_INVENTORY":
+        round(
+            stats.average_inventory(),
+            2
+        ),
 
-            "TOTAL_COST":
-                round(
-                    stats.total_cost,
-                    2
-                ),
+    "TOTAL_COST":
+        round(
+            stats.total_cost,
+            2
+        ),
 
-            "OVERTIME_PERCENT":
-                round(
-                    (
-                        stats.overtime_days
-                        / self.config.days
-                    ) * 100,
-                    2
-                ),
+    "OVERTIME_PERCENT":
+        round(
+            (
+                stats.overtime_days
+                / self.config.days
+            ) * 100,
+            2
+        ),
 
-            "DAYS":
-                list(
-                    range(
-                        1,
-                        self.config.days + 1
-                    )
-                ),
+    "INVENTORY_CAPACITY":
+        self.config.inventory_capacity,
 
-            "INVENTORY_HISTORY":
-                stats.inventory_history,
+    "CRITICAL_THRESHOLD":
+        (
+            self.config.inventory_capacity
+            * self.config.threshold_percentage
+        ),
 
-            "CRT_HISTORY":
-                stats.crt_history,
+    "DAYS":
+        list(
+            range(
+                1,
+                self.config.days + 1
+            )
+        ),
 
-            "LCD_HISTORY":
-                stats.lcd_history,
+    "INVENTORY_HISTORY":
+        stats.inventory_history,
 
-            "IRRECOVERABLE_HISTORY":
-                stats.irrecoverable_history,
+    "CRT_HISTORY":
+        stats.crt_history,
 
-            "COST_HISTORY":
-                stats.cost_history,
-        }
+    "LCD_HISTORY":
+        stats.lcd_history,
+
+    "IRRECOVERABLE_HISTORY":
+        stats.irrecoverable_history,
+
+    "COST_HISTORY":
+        stats.cost_history,
+}

@@ -6,13 +6,13 @@ from ui.styles import apply_custom_styles
 
 from simulation.simulator import Simulator
 
-from ui.charts import (
-    inventory_chart,
-    processed_chart,
-    cost_chart
-)
+import ui.charts as charts
+import os
+st.write("APP ejecutado desde:")
+st.code(os.path.abspath(__file__))
 
-
+st.write("CHARTS cargado desde:")
+st.code(charts.__file__)
 st.set_page_config(
     page_title="RAEE Simulator",
     page_icon="♻️",
@@ -58,15 +58,21 @@ if run_button:
 
     st.divider()
 
-    inventory_chart(results)
+    charts.inventory_chart(
+        results
+    )
 
     st.divider()
 
-    processed_chart(results)
+    charts.processed_chart(
+        results
+    )
 
     st.divider()
 
-    cost_chart(results)
+    charts.cost_chart(
+        results
+    )
 
 else:
     st.info(
