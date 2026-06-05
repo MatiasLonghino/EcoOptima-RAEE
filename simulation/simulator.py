@@ -26,7 +26,6 @@ class Simulator:
         stores = PlantStores(env)
 
         # Crea el modelo de procesamiento.
-        # Importante:
         # Se asume que PlantModel inicia internamente los procesos
         # de triage, CRT y LCD.
         model = PlantModel(
@@ -44,13 +43,6 @@ class Simulator:
 
         # ---------------------------------------------------------
         # CARGA DEL INVENTARIO INICIAL
-        # ---------------------------------------------------------
-        # No usamos stores.inventory.items.append(...)
-        # porque eso modifica directamente la lista interna del Store.
-        #
-        # En SimPy se debe usar put(), ya que put() dispara los eventos
-        # necesarios para que los procesos que están esperando con get()
-        # puedan continuar.
         # ---------------------------------------------------------
 
         for _ in range(self.config.initial_inventory):
@@ -75,8 +67,6 @@ class Simulator:
                 self.config.arrival_lambda
             )
 
-            # Agrega los monitores nuevos al inventario.
-            # Nuevamente usamos put(), no append().
             for _ in range(arrivals):
 
                 monitor_id += 1
@@ -89,47 +79,49 @@ class Simulator:
             # 2. DEFINICIÓN DE LA JORNADA LABORAL
             # -----------------------------------------------------
 
-            # Minutos normales de trabajo del día
             daily_minutes = self.config.workday_minutes
 
-            # Cantidad total de empleados activos
             employees = (
                 self.config.triage_servers
                 + self.config.crt_servers
                 + self.config.lcd_servers
             )
 
-            # Costo laboral diario base
+            # Costo laboral diario base.
+            # Este costo depende de la cantidad de servidores activos.
             labor_cost = (
                 employees
                 * self.config.employee_daily_cost
             )
 
             # Si el día anterior se superó el umbral crítico,
-            # entonces este día se trabaja con horas extra.
+            # este día se trabaja con horas extra.
             if overtime_next_day:
 
-                # Las horas extra aumentan el tiempo disponible
-                # de procesamiento durante este día.
                 daily_minutes += self.config.overtime_minutes
 
-                # Se incrementa el costo laboral por horas extra.
-                # Ojo: esto multiplica todo el costo diario por 1.5.
-                # Si más adelante querés más precisión, convendría separar
-                # costo normal y costo extra.
+                # Mantengo tu criterio original:
+                # si hay horas extra, se multiplica el costo laboral diario.
                 labor_cost *= 1.5
 
-                # Se registra un día con horas extra
                 stats.overtime_days += 1
 
-            # Acumula el costo total
-            stats.total_cost += labor_cost
+            # -----------------------------------------------------
+            # 3. REGISTRO DEL ESTADO ANTES DE PROCESAR EL DÍA
+            # -----------------------------------------------------
+            # Estos valores son necesarios porque processed_crt y
+            # processed_lcd son acumulados.
+            #
+            # Para calcular el costo diario de procesamiento, necesitamos
+            # saber cuántas unidades se procesaron solamente durante
+            # este día.
+            # -----------------------------------------------------
+
+            previous_crt = stats.processed_crt
+            previous_lcd = stats.processed_lcd
 
             # -----------------------------------------------------
-            # 3. EJECUCIÓN DE LA JORNADA
-            # -----------------------------------------------------
-            # Se corre el entorno durante la cantidad de minutos
-            # disponibles para este día.
+            # 4. EJECUCIÓN DE LA JORNADA
             # -----------------------------------------------------
 
             env.run(
@@ -137,17 +129,55 @@ class Simulator:
             )
 
             # -----------------------------------------------------
-            # 4. CÁLCULO DEL INVENTARIO FINAL DEL DÍA
+            # 5. CÁLCULO DE UNIDADES PROCESADAS EN EL DÍA
             # -----------------------------------------------------
-            # Este inventario representa todas las unidades que siguen
-            # dentro del sistema:
+
+            daily_crt = (
+                stats.processed_crt
+                - previous_crt
+            )
+
+            daily_lcd = (
+                stats.processed_lcd
+                - previous_lcd
+            )
+
+            # -----------------------------------------------------
+            # 6. CÁLCULO DEL COSTO DE PROCESAMIENTO
+            # -----------------------------------------------------
+            # Se agregan al costo total los costos variables por
+            # procesar unidades CRT y LCD.
             #
-            # - unidades todavía sin clasificar en inventory
-            # - unidades esperando procesamiento CRT
-            # - unidades esperando procesamiento LCD
+            # No se consideran costos por capacidad ociosa,
+            # acumulación completa de capacidad ni penalizaciones,
+            # porque actualmente no forman parte del modelo.
+            # -----------------------------------------------------
+
+            processing_cost = (
+                daily_crt * self.config.crt_cost
+                + daily_lcd * self.config.lcd_cost
+            )
+
+            # -----------------------------------------------------
+            # 7. CÁLCULO DEL COSTO TOTAL DIARIO
+            # -----------------------------------------------------
+            # El costo total diario ahora está compuesto por:
             #
-            # No incluye las unidades ya procesadas ni las irrecuperables
-            # ya descartadas.
+            # - costo laboral
+            # - costo de procesamiento de CRT
+            # - costo de procesamiento de LCD
+            # -----------------------------------------------------
+
+            daily_total_cost = (
+                labor_cost
+                + processing_cost
+            )
+
+            # Acumula el costo total del sistema
+            stats.total_cost += daily_total_cost
+
+            # -----------------------------------------------------
+            # 8. CÁLCULO DEL INVENTARIO FINAL DEL DÍA
             # -----------------------------------------------------
 
             inventory_level = (
@@ -156,33 +186,28 @@ class Simulator:
                 + len(stores.lcd_queue.items)
             )
 
-            # Guarda el inventario diario
             stats.inventory_history.append(
                 inventory_level
             )
 
-            # Guarda producción acumulada de CRT
             stats.crt_history.append(
                 stats.processed_crt
             )
 
-            # Guarda producción acumulada de LCD
             stats.lcd_history.append(
                 stats.processed_lcd
             )
 
-            # Guarda producción acumulada de irrecuperables
             stats.irrecoverable_history.append(
                 stats.processed_irrecoverable
             )
 
-            # Guarda costo acumulado
             stats.cost_history.append(
                 stats.total_cost
             )
 
             # -----------------------------------------------------
-            # 5. ACTIVACIÓN DE HORAS EXTRA PARA EL DÍA SIGUIENTE
+            # 9. ACTIVACIÓN DE HORAS EXTRA PARA EL DÍA SIGUIENTE
             # -----------------------------------------------------
 
             threshold = (
@@ -190,8 +215,6 @@ class Simulator:
                 * self.config.threshold_percentage
             )
 
-            # Si el inventario supera el umbral crítico,
-            # el día siguiente tendrá horas extra.
             overtime_next_day = (
                 inventory_level >= threshold
             )
@@ -208,37 +231,30 @@ class Simulator:
 
         return {
 
-            # Total de CRT procesados
             "CRT":
                 stats.processed_crt,
 
-            # Total de LCD procesados
             "LCD":
                 stats.processed_lcd,
 
-            # Total de irrecuperables procesados
             "IRRECOVERABLE":
                 stats.processed_irrecoverable,
 
-            # Inventario final en planta
             "FINAL_INVENTORY":
                 final_inventory,
 
-            # Inventario promedio
             "AVG_INVENTORY":
                 round(
                     stats.average_inventory(),
                     2
                 ),
 
-            # Costo total acumulado
             "TOTAL_COST":
                 round(
                     stats.total_cost,
                     2
                 ),
 
-            # Porcentaje de días con horas extra
             "OVERTIME_PERCENT":
                 round(
                     (
@@ -248,7 +264,6 @@ class Simulator:
                     2
                 ),
 
-            # Días simulados para eje X
             "DAYS":
                 list(
                     range(
@@ -257,23 +272,18 @@ class Simulator:
                     )
                 ),
 
-            # Historial diario del inventario
             "INVENTORY_HISTORY":
                 stats.inventory_history,
 
-            # Historial acumulado de CRT procesados
             "CRT_HISTORY":
                 stats.crt_history,
 
-            # Historial acumulado de LCD procesados
             "LCD_HISTORY":
                 stats.lcd_history,
 
-            # Historial acumulado de irrecuperables
             "IRRECOVERABLE_HISTORY":
                 stats.irrecoverable_history,
 
-            # Historial del costo acumulado
             "COST_HISTORY":
                 stats.cost_history,
         }
