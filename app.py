@@ -8,6 +8,7 @@ from simulation.simulator import Simulator
 
 from ui.charts import (
     inventory_chart,
+    admission_chart,
     processed_chart,
     cost_chart
 )
@@ -29,8 +30,8 @@ st.markdown(
     """
     <p class="app-caption">
     Simulación del procesamiento de monitores y pantallas RAEE,
-    considerando inventario, capacidad operativa, clasificación,
-    procesamiento y costos acumulados.
+    considerando capacidad física del depósito, ingresos bloqueados,
+    clasificación, procesamiento y costos acumulados.
     </p>
     """,
     unsafe_allow_html=True
@@ -48,25 +49,38 @@ run_button = st.button(
 
 if run_button:
 
-    simulator = Simulator(config)
+    try:
+        simulator = Simulator(config)
 
-    results = simulator.run()
+        results = simulator.run()
 
-    st.divider()
+        st.divider()
 
-    show_results(results)
+        show_results(results)
 
-    st.divider()
+        st.divider()
 
-    inventory_chart(results)
+        # Ahora recibe config para dibujar capacidad y umbral.
+        inventory_chart(results, config)
 
-    st.divider()
+        st.divider()
 
-    processed_chart(results)
+        # Muestra admitidos y bloqueados por falta de capacidad.
+        admission_chart(results)
 
-    st.divider()
+        st.divider()
 
-    cost_chart(results)
+        processed_chart(results)
+
+        st.divider()
+
+        cost_chart(results)
+
+    except ValueError as error:
+        st.error(f"Error de configuración: {error}")
+
+    except RuntimeError as error:
+        st.error(f"Error durante la simulación: {error}")
 
 else:
     st.info(

@@ -3,9 +3,11 @@ import simpy
 
 class PlantStores:
 
-    def __init__(self, env):
+    def __init__(self, env, inventory_capacity):
 
-        self.inventory = simpy.Store(env)
+        self.inventory = simpy.Store(
+            env, 
+            capacity=inventory_capacity)
 
         self.crt_queue = simpy.Store(env)
 

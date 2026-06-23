@@ -38,15 +38,10 @@ class PlantModel:
 
     def classify(self):
 
-        u = np.random.random()
-
-        if u <= 0.10:
-            return "IRRECOVERABLE"
-
-        elif u <= 0.40:
-            return "CRT"
-
-        return "LCD"
+        categorias = ["IRRECOVERABLE", "LCD", "CRT"]
+        probabilidades = [0.10, 0.30, 0.60]
+        
+        return np.random.choice(categorias, p=probabilidades)
 
     def triage_worker(self):
 
@@ -144,3 +139,80 @@ class PlantModel:
             self.stats.total_cost += (
                 self.config.lcd_cost
             )
+                       
+    def admit_daily_arrivals(self, urban_arrivals, agreement_arrivals):
+        """
+        Calcula cuántos equipos pueden ingresar físicamente
+        al depósito y registra los equipos rechazados.
+        """
+
+        total_arrivals = urban_arrivals + agreement_arrivals
+
+        current_inventory = len(self.stores.inventory.items)
+
+        available_space = (
+            self.config.inventory_capacity
+            - current_inventory
+        )
+
+        available_space = max(0, available_space)
+
+        admitted = min(
+            total_arrivals,
+            available_space
+        )
+
+        rejected = total_arrivals - admitted
+
+        # Solo se crean e ingresan los equipos admitidos.
+        for _ in range(admitted):
+            monitor = Monitor()
+            yield self.stores.inventory.put(monitor)
+
+        inventory_after_arrivals = len(
+            self.stores.inventory.items
+        )
+
+        # Registro de llegadas.
+        self.stats.urban_arrivals_history.append(
+            urban_arrivals
+        )
+
+        self.stats.agreement_arrivals_history.append(
+            agreement_arrivals
+        )
+
+        self.stats.total_arrivals_history.append(
+            total_arrivals
+        )
+
+        self.stats.admitted_history.append(admitted)
+        self.stats.rejected_history.append(rejected)
+
+        self.stats.total_admitted += admitted
+        self.stats.total_rejected += rejected
+
+        self.stats.inventory_after_arrivals_history.append(
+            inventory_after_arrivals
+        )
+
+        # Control de capacidad.
+        self.stats.max_inventory_recorded = max(
+            self.stats.max_inventory_recorded,
+            inventory_after_arrivals
+        )
+
+        if inventory_after_arrivals > self.config.inventory_capacity:
+            self.stats.capacity_violations += 1
+
+            raise RuntimeError(
+                "Se detectó inventario superior a la capacidad "
+                "del depósito."
+            )
+
+        return {
+            "available_space": available_space,
+            "admitted": admitted,
+            "rejected": rejected,
+            "inventory_after_arrivals": inventory_after_arrivals
+        }

@@ -7,12 +7,9 @@ def build_sidebar():
     """
     Construye el panel lateral de parámetros.
 
-    Desde acá el usuario modifica los valores de entrada
-    que luego se usan para crear el objeto SimulationConfig.
-
     Las validaciones se aplican directamente en los inputs:
-    - No se permiten inventarios negativos.
-    - No se permiten capacidades menores a 1.
+    - La capacidad debe ser mayor o igual a 1.
+    - El stock inicial no puede superar la capacidad.
     - No se permiten servidores menores a 1.
     - No se permiten días de simulación menores a 1.
     """
@@ -23,26 +20,36 @@ def build_sidebar():
         st.markdown("### Inventario")
 
         inventory_capacity = st.number_input(
-            "Capacidad máxima del depósito",
-            min_value=0,
+            "Capacidad física máxima del depósito",
+            min_value=1,
             value=300,
             step=10
         )
 
         threshold_percentage = st.slider(
-            "Umbral de capacidad",
+            "Umbral para activar horas extra",
             min_value=0.50,
             max_value=1.00,
             value=0.85,
             step=0.01
         )
 
+        initial_inventory_default = min(
+            100,
+            inventory_capacity
+        )
+
         initial_inventory = st.number_input(
             "Stock inicial",
             min_value=0,
             max_value=inventory_capacity,
-            value=100,
+            value=initial_inventory_default,
             step=1
+        )
+
+        st.caption(
+            "Los equipos que lleguen sin espacio disponible serán "
+            "registrados como ingresos bloqueados."
         )
 
         st.divider()
@@ -50,7 +57,7 @@ def build_sidebar():
         st.markdown("### Llegadas")
 
         arrival_lambda = st.number_input(
-            "Llegadas promedio por día",
+            "Llegadas promedio totales por día",
             min_value=0,
             value=45,
             step=1
@@ -120,14 +127,14 @@ def build_sidebar():
         crt_cost = st.number_input(
             "Costo procesamiento CRT",
             min_value=0.0,
-            value=1500.0,
+            value=15000.0,
             step=100.0
         )
 
         lcd_cost = st.number_input(
             "Costo procesamiento LCD",
             min_value=0.0,
-            value=800.0,
+            value=8000.0,
             step=100.0
         )
 

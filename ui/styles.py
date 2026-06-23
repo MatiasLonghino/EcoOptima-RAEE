@@ -4,13 +4,6 @@ import streamlit as st
 def apply_custom_styles():
     """
     Aplica estilos visuales personalizados a la aplicación Streamlit.
-
-    Estos estilos no modifican la lógica de simulación.
-    Solo mejoran la apariencia del dashboard:
-    - Sidebar más oscuro y ordenado.
-    - Métricas con formato de tarjetas.
-    - Mejor separación entre bloques.
-    - Ancho de contenido más cómodo.
     """
 
     st.markdown(
@@ -52,6 +45,13 @@ def apply_custom_styles():
             color: #ffffff;
         }
 
+        div[data-testid="stAlert"] {
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-top: 8px;
+            margin-bottom: 20px;
+        }
+
         div.stButton > button {
             border-radius: 10px;
             height: 42px;
@@ -70,6 +70,10 @@ def apply_custom_styles():
             color: #b8bcc8;
             font-size: 16px;
             margin-bottom: 20px;
+        }
+
+        div[data-testid="stCaptionContainer"] {
+            color: #9da3b2;
         }
         </style>
         """,
