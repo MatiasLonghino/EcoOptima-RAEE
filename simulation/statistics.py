@@ -9,6 +9,10 @@ class Statistics:
     processed_lcd: int = 0
     processed_irrecoverable: int = 0
     total_cost: float = 0
+    total_processing_cost: float = 0
+    total_base_labor_cost: float = 0
+    total_labor_cost: float = 0
+    total_overtime_extra_cost: float = 0
     overtime_days: int = 0
 
     # Acumuladores de capacidad del depósito
@@ -24,6 +28,15 @@ class Statistics:
     lcd_history: list = field(default_factory=list)
     irrecoverable_history: list = field(default_factory=list)
     cost_history: list = field(default_factory=list)
+    processing_cost_history: list = field(default_factory=list)
+    base_labor_cost_history: list = field(default_factory=list)
+    labor_cost_history: list = field(default_factory=list)
+    overtime_extra_cost_history: list = field(default_factory=list)
+    daily_cost_history: list = field(default_factory=list)
+    daily_processing_cost_history: list = field(default_factory=list)
+    daily_base_labor_cost_history: list = field(default_factory=list)
+    daily_labor_cost_history: list = field(default_factory=list)
+    daily_overtime_extra_cost_history: list = field(default_factory=list)
 
     # Series temporales de admisión al depósito
     admitted_history: list = field(default_factory=list)

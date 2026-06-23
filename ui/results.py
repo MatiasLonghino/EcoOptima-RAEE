@@ -3,13 +3,13 @@ import streamlit as st
 
 def show_results(results):
     """
-    Muestra los resultados principales de la simulación.
+    Muestra los resultados principales de la simulacion.
 
-    Separa los resultados operativos generales de los
-    indicadores específicos de capacidad del depósito.
+    Separa los resultados operativos, los costos y los
+    indicadores especificos de capacidad del deposito.
     """
 
-    st.subheader("📊 Resultados principales")
+    st.subheader("Resultados principales")
 
     total_processed = (
         results["CRT"]
@@ -27,7 +27,7 @@ def show_results(results):
 
     with col2:
         st.metric(
-            "LCD procesados",
+            "LCD/LED procesados",
             results["LCD"]
         )
 
@@ -53,11 +53,38 @@ def show_results(results):
 
     with col6:
         st.metric(
-            "% días con horas extra",
+            "% dias con horas extra",
             f"{results['OVERTIME_PERCENT']:.2f}%"
         )
 
-    st.subheader("📦 Inventario del sistema")
+    st.subheader("Desglose de costos")
+
+    col_cost1, col_cost2, col_cost3 = st.columns(3)
+
+    with col_cost1:
+        st.metric(
+            "Procesamiento CRT/LCD",
+            f"${results['TOTAL_PROCESSING_COST']:,.0f}"
+        )
+
+    with col_cost2:
+        st.metric(
+            "Sueldos base",
+            f"${results['TOTAL_BASE_LABOR_COST']:,.0f}"
+        )
+
+    with col_cost3:
+        st.metric(
+            "Extra por horas extra",
+            f"${results['TOTAL_OVERTIME_EXTRA_COST']:,.0f}"
+        )
+
+    st.caption(
+        "El costo total suma procesamiento, sueldos base y el "
+        "recargo aplicado en los dias con turnos extra."
+    )
+
+    st.subheader("Inventario del sistema")
 
     col7, col8, col9 = st.columns(3)
 
@@ -69,7 +96,7 @@ def show_results(results):
 
     with col8:
         st.metric(
-            "Depósito físico final",
+            "Deposito fisico final",
             results["FINAL_STORAGE_INVENTORY"]
         )
 
@@ -80,12 +107,12 @@ def show_results(results):
         )
 
     st.caption(
-        "El inventario total incluye el depósito y las colas de "
-        "procesamiento CRT/LCD. El depósito físico solo incluye "
+        "El inventario total incluye el deposito y las colas de "
+        "procesamiento CRT/LCD. El deposito fisico solo incluye "
         "los equipos realmente almacenados."
     )
 
-    st.subheader("🛡️ Control de capacidad")
+    st.subheader("Control de capacidad")
 
     col10, col11, col12, col13 = st.columns(4)
 
@@ -103,7 +130,7 @@ def show_results(results):
 
     with col12:
         st.metric(
-            "Máximo en depósito",
+            "Maximo en deposito",
             results["MAX_STORAGE_INVENTORY"]
         )
 
@@ -115,11 +142,11 @@ def show_results(results):
 
     if results["CAPACITY_OK"]:
         st.success(
-            "✅ Restricción de capacidad cumplida: el inventario "
-            "físico nunca superó el límite del depósito."
+            "Restriccion de capacidad cumplida: el inventario "
+            "fisico nunca supero el limite del deposito."
         )
     else:
         st.error(
-            "❌ Se detectó una violación de capacidad. Revisá la "
-            "lógica de admisión al depósito."
+            "Se detecto una violacion de capacidad. Revisa la "
+            "logica de admision al deposito."
         )
