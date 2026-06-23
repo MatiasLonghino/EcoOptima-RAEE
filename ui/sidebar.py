@@ -5,37 +5,35 @@ from simulation.config import SimulationConfig
 
 def build_sidebar():
     """
-    Construye el panel lateral de parámetros.
+    Construye el panel lateral con los parametros que puede
+    modificar el usuario.
 
-    Las validaciones se aplican directamente en los inputs:
-    - La capacidad debe ser mayor o igual a 1.
-    - El stock inicial no puede superar la capacidad.
-    - No se permiten servidores menores a 1.
-    - No se permiten días de simulación menores a 1.
+    El resto de los valores del modelo se toman como datos fijos
+    desde SimulationConfig.
     """
 
     with st.sidebar:
-        st.title("⚙️ Parámetros")
+        st.title("Parametros")
 
         st.markdown("### Inventario")
 
         inventory_capacity = st.number_input(
-            "Capacidad física máxima del depósito",
+            "Capacidad maxima del deposito",
             min_value=1,
-            value=300,
+            value=SimulationConfig.inventory_capacity,
             step=10
         )
 
         threshold_percentage = st.slider(
-            "Umbral para activar horas extra",
+            "Umbral critico de ocupacion",
             min_value=0.50,
             max_value=1.00,
-            value=0.85,
+            value=SimulationConfig.threshold_percentage,
             step=0.01
         )
 
         initial_inventory_default = min(
-            100,
+            SimulationConfig.initial_inventory,
             inventory_capacity
         )
 
@@ -47,19 +45,14 @@ def build_sidebar():
             step=1
         )
 
-        st.caption(
-            "Los equipos que lleguen sin espacio disponible serán "
-            "registrados como ingresos bloqueados."
-        )
-
         st.divider()
 
         st.markdown("### Llegadas")
 
         arrival_lambda = st.number_input(
-            "Llegadas promedio totales por día",
+            "Llegadas promedio por dia",
             min_value=0,
-            value=45,
+            value=SimulationConfig.arrival_lambda,
             step=1
         )
 
@@ -68,74 +61,35 @@ def build_sidebar():
         st.markdown("### Servidores")
 
         triage_servers = st.number_input(
-            "Servidores Triage",
+            "Cantidad de servidores de triage",
             min_value=1,
-            value=1,
+            value=SimulationConfig.triage_servers,
             step=1
         )
 
         crt_servers = st.number_input(
-            "Servidores CRT",
+            "Cantidad de servidores CRT",
             min_value=1,
-            value=2,
+            value=SimulationConfig.crt_servers,
             step=1
         )
 
         lcd_servers = st.number_input(
-            "Servidores LCD",
+            "Cantidad de servidores LCD/LED",
             min_value=1,
-            value=1,
+            value=SimulationConfig.lcd_servers,
             step=1
         )
 
         st.divider()
 
-        st.markdown("### Tiempo de simulación")
+        st.markdown("### Tiempo de simulacion")
 
         days = st.number_input(
-            "Días simulados",
+            "Dias simulados",
             min_value=1,
-            value=30,
+            value=SimulationConfig.days,
             step=1
-        )
-
-        workday_minutes = st.number_input(
-            "Minutos jornada normal",
-            min_value=1,
-            value=480,
-            step=30
-        )
-
-        overtime_minutes = st.number_input(
-            "Minutos de horas extra",
-            min_value=0,
-            value=120,
-            step=30
-        )
-
-        st.divider()
-
-        st.markdown("### Costos")
-
-        employee_daily_cost = st.number_input(
-            "Costo diario por empleado",
-            min_value=0.0,
-            value=30.0,
-            step=10.0
-        )
-
-        crt_cost = st.number_input(
-            "Costo procesamiento CRT",
-            min_value=0.0,
-            value=15000.0,
-            step=100.0
-        )
-
-        lcd_cost = st.number_input(
-            "Costo procesamiento LCD",
-            min_value=0.0,
-            value=8000.0,
-            step=100.0
         )
 
     return SimulationConfig(
@@ -146,10 +100,5 @@ def build_sidebar():
         arrival_lambda=arrival_lambda,
         triage_servers=triage_servers,
         crt_servers=crt_servers,
-        lcd_servers=lcd_servers,
-        workday_minutes=workday_minutes,
-        overtime_minutes=overtime_minutes,
-        employee_daily_cost=employee_daily_cost,
-        crt_cost=crt_cost,
-        lcd_cost=lcd_cost
+        lcd_servers=lcd_servers
     )

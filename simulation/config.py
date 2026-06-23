@@ -15,7 +15,7 @@ class SimulationConfig:
     lcd_servers: int = 3
     workday_minutes: int = 480
     overtime_minutes: int = 120
-    employee_daily_cost: float = 30 #aun no se esta usando para el costo total como corresponde
+    employee_daily_cost: float = 400000
     crt_cost: float = 15000
     lcd_cost: float = 8000
     

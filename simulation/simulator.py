@@ -178,20 +178,41 @@ class Simulator:
                 + self.config.lcd_servers
             )
 
-            labor_cost = (
+            base_labor_cost = (
                 employees
                 * self.config.employee_daily_cost
             )
+
+            overtime_extra_cost = 0
 
             if overtime_next_day:
 
                 daily_minutes += self.config.overtime_minutes
 
-                labor_cost *= 1.5
+                overtime_extra_cost = (
+                    base_labor_cost
+                    * 0.5
+                )
 
                 stats.overtime_days += 1
 
-            stats.total_cost += labor_cost
+            daily_labor_cost = (
+                base_labor_cost
+                + overtime_extra_cost
+            )
+
+            stats.total_base_labor_cost += base_labor_cost
+            stats.total_labor_cost += daily_labor_cost
+            stats.total_overtime_extra_cost += overtime_extra_cost
+            stats.total_cost += daily_labor_cost
+
+            processing_cost_before_day = (
+                stats.total_processing_cost
+            )
+            total_cost_before_day = (
+                stats.total_cost
+                - daily_labor_cost
+            )
 
             # -----------------------------------------------------
             # 3. EJECUCIÓN DE LA JORNADA
@@ -199,6 +220,16 @@ class Simulator:
 
             env.run(
                 until=env.now + daily_minutes
+            )
+
+            daily_processing_cost = (
+                stats.total_processing_cost
+                - processing_cost_before_day
+            )
+
+            daily_total_cost = (
+                stats.total_cost
+                - total_cost_before_day
             )
 
             # -----------------------------------------------------
@@ -264,6 +295,42 @@ class Simulator:
                 stats.total_cost
             )
 
+            stats.processing_cost_history.append(
+                stats.total_processing_cost
+            )
+
+            stats.base_labor_cost_history.append(
+                stats.total_base_labor_cost
+            )
+
+            stats.labor_cost_history.append(
+                stats.total_labor_cost
+            )
+
+            stats.overtime_extra_cost_history.append(
+                stats.total_overtime_extra_cost
+            )
+
+            stats.daily_cost_history.append(
+                daily_total_cost
+            )
+
+            stats.daily_processing_cost_history.append(
+                daily_processing_cost
+            )
+
+            stats.daily_base_labor_cost_history.append(
+                base_labor_cost
+            )
+
+            stats.daily_labor_cost_history.append(
+                daily_labor_cost
+            )
+
+            stats.daily_overtime_extra_cost_history.append(
+                overtime_extra_cost
+            )
+
             # -----------------------------------------------------
             # 5. ACTIVACIÓN DE HORAS EXTRA PARA EL DÍA SIGUIENTE
             # -----------------------------------------------------
@@ -314,6 +381,26 @@ class Simulator:
 
             "TOTAL_COST": round(
                 stats.total_cost,
+                2
+            ),
+
+            "TOTAL_PROCESSING_COST": round(
+                stats.total_processing_cost,
+                2
+            ),
+
+            "TOTAL_BASE_LABOR_COST": round(
+                stats.total_base_labor_cost,
+                2
+            ),
+
+            "TOTAL_LABOR_COST": round(
+                stats.total_labor_cost,
+                2
+            ),
+
+            "TOTAL_OVERTIME_EXTRA_COST": round(
+                stats.total_overtime_extra_cost,
                 2
             ),
 
@@ -373,4 +460,31 @@ class Simulator:
 
             "COST_HISTORY":
                 stats.cost_history,
+
+            "PROCESSING_COST_HISTORY":
+                stats.processing_cost_history,
+
+            "BASE_LABOR_COST_HISTORY":
+                stats.base_labor_cost_history,
+
+            "LABOR_COST_HISTORY":
+                stats.labor_cost_history,
+
+            "OVERTIME_EXTRA_COST_HISTORY":
+                stats.overtime_extra_cost_history,
+
+            "DAILY_COST_HISTORY":
+                stats.daily_cost_history,
+
+            "DAILY_PROCESSING_COST_HISTORY":
+                stats.daily_processing_cost_history,
+
+            "DAILY_BASE_LABOR_COST_HISTORY":
+                stats.daily_base_labor_cost_history,
+
+            "DAILY_LABOR_COST_HISTORY":
+                stats.daily_labor_cost_history,
+
+            "DAILY_OVERTIME_EXTRA_COST_HISTORY":
+                stats.daily_overtime_extra_cost_history,
         }
