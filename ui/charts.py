@@ -5,25 +5,21 @@ import streamlit as st
 
 def inventory_chart(results, config):
     """
-    Grafica el inventario físico dentro del depósito.
-
-    Este valor no incluye las colas de CRT ni LCD, porque esas
-    unidades ya no están físicamente almacenadas en el depósito.
-
-    Incluye líneas de referencia para:
-    - Capacidad máxima del depósito.
-    - Umbral que activa horas extra.
+    Grafica el inventario fisico promedio y su tendencia visual.
     """
 
     days = results["DAYS"]
-
     storage_inventory_history = results[
-        "STORAGE_INVENTORY_HISTORY"
+        "PHYSICAL_DEPOT_AVERAGE_HISTORY"
+    ]
+    trend_history = results[
+        "PHYSICAL_DEPOT_TREND_HISTORY"
     ]
 
     min_length = min(
         len(days),
-        len(storage_inventory_history)
+        len(storage_inventory_history),
+        len(trend_history)
     )
 
     if min_length == 0:
@@ -37,149 +33,77 @@ def inventory_chart(results, config):
         * config.threshold_percentage
     )
 
-    df = pd.DataFrame({
-        "Día": days[:min_length],
-        "Inventario físico": storage_inventory_history[:min_length]
-    })
+    days = days[:min_length]
+    storage_inventory_history = (
+        storage_inventory_history[:min_length]
+    )
+    trend_history = trend_history[:min_length]
 
-    limits_df = pd.DataFrame({
-        "Valor": [
-            capacity,
-            threshold
-        ],
-        "Límite": [
-            "Capacidad máxima",
-            "Umbral de horas extra"
-        ]
-    })
+    df = _build_series_dataframe(
+        days,
+        {
+            "Inventario fisico promedio":
+                storage_inventory_history,
+            "Tendencia del inventario":
+                trend_history,
+            "Capacidad maxima":
+                [capacity] * min_length,
+            "Umbral critico":
+                [threshold] * min_length,
+        }
+    )
 
     max_value = max(
         capacity,
-        df["Inventario físico"].max()
+        threshold,
+        max(storage_inventory_history),
+        max(trend_history)
     )
 
-    y_encoding = alt.Y(
-        "Valor:Q",
-        title="Equipos",
-        scale=alt.Scale(
-            domain=[
-                0,
-                max_value * 1.10
-            ]
-        )
+    chart = _line_chart(
+        df,
+        y_title="Equipos",
+        y_domain=[
+            0,
+            max_value * 1.10
+        ],
+        color_domain=[
+            "Inventario fisico promedio",
+            "Tendencia del inventario",
+            "Capacidad maxima",
+            "Umbral critico",
+        ],
+        color_range=[
+            "#4c78a8",
+            "#54a24b",
+            "#e45756",
+            "#f2a900",
+        ],
+        dash_range=[
+            [],
+            [8, 4],
+            [6, 4],
+            [3, 3],
+        ]
     )
 
-    inventory_line = (
-        alt.Chart(
-            df.rename(
-                columns={
-                    "Inventario físico": "Valor"
-                }
-            )
-        )
-        .mark_line(
-            point=True
-        )
-        .encode(
-            x=alt.X(
-                "Día:Q",
-                title="Día",
-                axis=alt.Axis(
-                    tickMinStep=1
-                )
-            ),
-            y=y_encoding,
-            tooltip=[
-                alt.Tooltip(
-                    "Día:Q",
-                    title="Día"
-                ),
-                alt.Tooltip(
-                    "Valor:Q",
-                    title="Inventario físico"
-                )
-            ]
-        )
-    )
-
-    capacity_line = (
-        alt.Chart(
-            limits_df[
-                limits_df["Límite"]
-                == "Capacidad máxima"
-            ]
-        )
-        .mark_rule(
-            color="#e45756",
-            strokeWidth=2,
-            strokeDash=[6, 4]
-        )
-        .encode(
-            y=y_encoding,
-            tooltip=[
-                alt.Tooltip(
-                    "Límite:N"
-                ),
-                alt.Tooltip(
-                    "Valor:Q",
-                    title="Equipos"
-                )
-            ]
-        )
-    )
-
-    threshold_line = (
-        alt.Chart(
-            limits_df[
-                limits_df["Límite"]
-                == "Umbral de horas extra"
-            ]
-        )
-        .mark_rule(
-            color="#f2a900",
-            strokeWidth=2,
-            strokeDash=[4, 4]
-        )
-        .encode(
-            y=y_encoding,
-            tooltip=[
-                alt.Tooltip(
-                    "Límite:N"
-                ),
-                alt.Tooltip(
-                    "Valor:Q",
-                    title="Equipos"
-                )
-            ]
-        )
-    )
-
-    chart = (
-        inventory_line
-        + capacity_line
-        + threshold_line
-    ).properties(
-        height=340
-    )
-
-    st.subheader("📈 Inventario físico del depósito")
+    st.subheader("Inventario fisico promedio del deposito")
 
     st.altair_chart(
         chart,
         use_container_width=True
     )
 
-    st.caption(
-        f"Línea roja: capacidad máxima ({capacity} equipos). "
-        f"Línea amarilla: umbral de horas extra "
-        f"({threshold:.0f} equipos)."
+    _show_trend_caption(
+        results["PHYSICAL_DEPOT_TREND_SLOPE"],
+        "La linea de tendencia representa la evolucion general "
+        "del inventario fisico promedio dentro del periodo simulado."
     )
 
 
 def admission_chart(results):
     """
-    Grafica los equipos admitidos y bloqueados por falta
-    de espacio en el depósito.
+    Grafica los equipos admitidos y bloqueados promedio por dia.
     """
 
     days = results["DAYS"]
@@ -194,20 +118,20 @@ def admission_chart(results):
     )
 
     if min_length == 0:
-        st.info("No hay datos de admisión para graficar.")
+        st.info("No hay datos de admision para graficar.")
         return
 
     df = pd.DataFrame({
-        "Día": days[:min_length],
+        "Dia": days[:min_length],
         "Equipos admitidos": admitted_history[:min_length],
         "Equipos bloqueados": rejected_history[:min_length]
     })
 
-    st.subheader("🚚 Admisión diaria de equipos")
+    st.subheader("Admision diaria promedio de equipos")
 
     st.bar_chart(
         df,
-        x="Día",
+        x="Dia",
         y=[
             "Equipos admitidos",
             "Equipos bloqueados"
@@ -216,15 +140,14 @@ def admission_chart(results):
     )
 
     st.caption(
-        "Los equipos bloqueados representan ingresos que no pudieron "
-        "entrar porque el depósito no tenía espacio disponible."
+        "Promedios diarios entre corridas. Los equipos bloqueados "
+        "representan ingresos que no pudieron entrar por falta de espacio."
     )
 
 
 def processed_chart(results):
     """
-    Grafica la evolución acumulada de unidades procesadas,
-    discriminadas por tipo: CRT, LCD e irrecuperables.
+    Grafica la evolucion acumulada promedio de unidades procesadas.
     """
 
     days = results["DAYS"]
@@ -244,17 +167,17 @@ def processed_chart(results):
         return
 
     df = pd.DataFrame({
-        "Día": days[:min_length],
+        "Dia": days[:min_length],
         "CRT procesados": crt_history[:min_length],
         "LCD procesados": lcd_history[:min_length],
         "Irrecuperables procesados": irrecoverable_history[:min_length]
     })
 
-    st.subheader("📦 Unidades procesadas acumuladas por tipo")
+    st.subheader("Unidades procesadas promedio acumuladas por tipo")
 
     st.line_chart(
         df,
-        x="Día",
+        x="Dia",
         y=[
             "CRT procesados",
             "LCD procesados",
@@ -266,32 +189,165 @@ def processed_chart(results):
 
 def cost_chart(results):
     """
-    Grafica la evolución del costo total acumulado
-    durante la simulación.
+    Grafica el costo acumulado promedio y su tendencia visual.
     """
 
     days = results["DAYS"]
-    cost_history = results["COST_HISTORY"]
+    cost_history = results["COST_AVERAGE_HISTORY"]
+    trend_history = results["COST_TREND_HISTORY"]
 
     min_length = min(
         len(days),
-        len(cost_history)
+        len(cost_history),
+        len(trend_history)
     )
 
     if min_length == 0:
         st.info("No hay datos de costo para graficar.")
         return
 
-    df = pd.DataFrame({
-        "Día": days[:min_length],
-        "Costo acumulado": cost_history[:min_length]
-    })
+    days = days[:min_length]
+    cost_history = cost_history[:min_length]
+    trend_history = trend_history[:min_length]
 
-    st.subheader("💰 Evolución del costo acumulado")
+    df = _build_series_dataframe(
+        days,
+        {
+            "Costo acumulado promedio": cost_history,
+            "Tendencia del costo": trend_history,
+        }
+    )
 
-    st.line_chart(
+    max_value = max(
+        max(cost_history),
+        max(trend_history)
+    )
+
+    chart = _line_chart(
         df,
-        x="Día",
-        y="Costo acumulado",
+        y_title="Costo",
+        y_domain=[
+            0,
+            max_value * 1.10
+        ],
+        color_domain=[
+            "Costo acumulado promedio",
+            "Tendencia del costo",
+        ],
+        color_range=[
+            "#4c78a8",
+            "#54a24b",
+        ],
+        dash_range=[
+            [],
+            [8, 4],
+        ]
+    )
+
+    st.subheader("Evolucion promedio del costo acumulado")
+
+    st.altair_chart(
+        chart,
         use_container_width=True
+    )
+
+    _show_trend_caption(
+        results["COST_TREND_SLOPE"],
+        "La linea de tendencia representa la velocidad general "
+        "de acumulacion de costos dentro del periodo simulado."
+    )
+
+
+def _build_series_dataframe(days, series_by_name):
+
+    rows = []
+
+    for series_name, values in series_by_name.items():
+        for day, value in zip(days, values):
+            rows.append({
+                "Dia": day,
+                "Valor": value,
+                "Serie": series_name,
+            })
+
+    return pd.DataFrame(rows)
+
+
+def _line_chart(
+    df,
+    y_title,
+    y_domain,
+    color_domain,
+    color_range,
+    dash_range
+):
+
+    color = alt.Color(
+        "Serie:N",
+        title="Linea",
+        scale=alt.Scale(
+            domain=color_domain,
+            range=color_range
+        )
+    )
+
+    stroke_dash = alt.StrokeDash(
+        "Serie:N",
+        title="Linea",
+        scale=alt.Scale(
+            domain=color_domain,
+            range=dash_range
+        ),
+        legend=None
+    )
+
+    return (
+        alt.Chart(df)
+        .mark_line(
+            strokeWidth=2
+        )
+        .encode(
+            x=alt.X(
+                "Dia:Q",
+                title="Dia",
+                axis=alt.Axis(
+                    tickMinStep=1
+                )
+            ),
+            y=alt.Y(
+                "Valor:Q",
+                title=y_title,
+                scale=alt.Scale(
+                    domain=y_domain
+                )
+            ),
+            color=color,
+            strokeDash=stroke_dash,
+            tooltip=[
+                alt.Tooltip(
+                    "Dia:Q",
+                    title="Dia"
+                ),
+                alt.Tooltip(
+                    "Serie:N",
+                    title="Linea"
+                ),
+                alt.Tooltip(
+                    "Valor:Q",
+                    title=y_title,
+                    format=",.2f"
+                ),
+            ]
+        )
+        .properties(
+            height=340
+        )
+    )
+
+
+def _show_trend_caption(slope, description):
+
+    st.caption(
+        f"{description} Pendiente estimada: {slope:.4f}. "
+        "No constituye una proyeccion futura ni un criterio de aceptacion."
     )

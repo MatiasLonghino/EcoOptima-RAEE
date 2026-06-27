@@ -1,6 +1,3 @@
-import numpy as np
-
-
 class PlantModel:
 
     def __init__(
@@ -8,13 +5,15 @@ class PlantModel:
         env,
         stores,
         config,
-        stats
+        stats,
+        rng
     ):
 
         self.env = env
         self.stores = stores
         self.config = config
         self.stats = stats
+        self.rng = rng
 
         for _ in range(
             config.triage_servers
@@ -42,7 +41,7 @@ class PlantModel:
         categorias = ["IRRECOVERABLE", "LCD", "CRT"]
         probabilidades = [0.10, 0.30, 0.60]
 
-        return np.random.choice(categorias, p=probabilidades)
+        return self.rng.choice(categorias, p=probabilidades)
 
     def triage_worker(self):
 
@@ -52,7 +51,9 @@ class PlantModel:
                 self.stores.inventory.get()
             )
 
-            triage_time = np.random.uniform(
+            self.stats.in_triage += 1
+
+            triage_time = self.rng.uniform(
                 10,
                 15
             )
@@ -64,6 +65,8 @@ class PlantModel:
             category = self.classify()
 
             monitor.category = category
+
+            self.stats.in_triage -= 1
 
             if category == "IRRECOVERABLE":
 
@@ -93,9 +96,11 @@ class PlantModel:
                 self.stores.crt_queue.get()
             )
 
+            self.stats.in_crt_processing += 1
+
             process_time = max(
                 0,
-                np.random.normal(
+                self.rng.normal(
                     20,
                     3
                 )
@@ -106,6 +111,8 @@ class PlantModel:
             )
 
             monitor.processed = True
+
+            self.stats.in_crt_processing -= 1
 
             self.stats.processed_crt += 1
 
@@ -125,9 +132,11 @@ class PlantModel:
                 self.stores.lcd_queue.get()
             )
 
+            self.stats.in_lcd_processing += 1
+
             process_time = max(
                 0,
-                np.random.normal(
+                self.rng.normal(
                     37,
                     4
                 )
@@ -138,6 +147,8 @@ class PlantModel:
             )
 
             monitor.processed = True
+
+            self.stats.in_lcd_processing -= 1
 
             self.stats.processed_lcd += 1
 
