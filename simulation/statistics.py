@@ -21,6 +21,11 @@ class Statistics:
     max_storage_inventory: int = 0
     capacity_violations: int = 0
 
+    # Equipos retirados de las colas y actualmente en servicio.
+    in_triage: int = 0
+    in_crt_processing: int = 0
+    in_lcd_processing: int = 0
+
     # Series temporales generales
     time_history: list = field(default_factory=list)
     inventory_history: list = field(default_factory=list)
