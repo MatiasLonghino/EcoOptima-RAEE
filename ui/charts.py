@@ -1,6 +1,7 @@
 import altair as alt
 import pandas as pd
 import streamlit as st
+from textwrap import dedent
 
 
 def inventory_chart(results, config):
@@ -12,6 +13,10 @@ def inventory_chart(results, config):
     storage_inventory_history = results[
         "PHYSICAL_DEPOT_AVERAGE_HISTORY"
     ]
+    max_storage_inventory_history = results.get(
+        "PHYSICAL_DEPOT_MAX_HISTORY",
+        storage_inventory_history
+    )
     trend_history = results[
         "PHYSICAL_DEPOT_TREND_HISTORY"
     ]
@@ -19,6 +24,7 @@ def inventory_chart(results, config):
     min_length = min(
         len(days),
         len(storage_inventory_history),
+        len(max_storage_inventory_history),
         len(trend_history)
     )
 
@@ -37,6 +43,9 @@ def inventory_chart(results, config):
     storage_inventory_history = (
         storage_inventory_history[:min_length]
     )
+    max_storage_inventory_history = (
+        max_storage_inventory_history[:min_length]
+    )
     trend_history = trend_history[:min_length]
 
     df = _build_series_dataframe(
@@ -44,6 +53,8 @@ def inventory_chart(results, config):
         {
             "Inventario fisico promedio":
                 storage_inventory_history,
+            "Maximo observado entre corridas":
+                max_storage_inventory_history,
             "Tendencia del inventario":
                 trend_history,
             "Capacidad maxima":
@@ -57,6 +68,7 @@ def inventory_chart(results, config):
         capacity,
         threshold,
         max(storage_inventory_history),
+        max(max_storage_inventory_history),
         max(trend_history)
     )
 
@@ -69,35 +81,69 @@ def inventory_chart(results, config):
         ],
         color_domain=[
             "Inventario fisico promedio",
+            "Maximo observado entre corridas",
             "Tendencia del inventario",
             "Capacidad maxima",
             "Umbral critico",
         ],
         color_range=[
             "#4c78a8",
+            "#b279a2",
             "#54a24b",
             "#e45756",
             "#f2a900",
         ],
         dash_range=[
             [],
+            [2, 2],
             [8, 4],
             [6, 4],
             [3, 3],
-        ]
+        ],
+        show_legend=False
     )
 
-    st.subheader("Inventario fisico promedio del deposito")
+    st.subheader("Inventario fisico del deposito")
 
     st.altair_chart(
         chart,
         use_container_width=True
     )
 
+    _show_line_legend([
+        {
+            "label": "Inventario fisico promedio",
+            "color": "#4c78a8",
+            "style": "solid",
+        },
+        {
+            "label": "Maximo observado entre corridas",
+            "color": "#b279a2",
+            "style": "dotted",
+        },
+        {
+            "label": "Tendencia del inventario",
+            "color": "#54a24b",
+            "style": "dashed",
+        },
+        {
+            "label": "Capacidad maxima",
+            "color": "#e45756",
+            "style": "dashed",
+        },
+        {
+            "label": "Umbral critico",
+            "color": "#f2a900",
+            "style": "dotted",
+        },
+    ])
+
     _show_trend_caption(
         results["PHYSICAL_DEPOT_TREND_SLOPE"],
         "La linea de tendencia representa la evolucion general "
-        "del inventario fisico promedio dentro del periodo simulado."
+        "del inventario fisico promedio dentro del periodo simulado. "
+        "El maximo observado muestra el mayor valor registrado "
+        "entre corridas para cada dia."
     )
 
 
@@ -279,7 +325,8 @@ def _line_chart(
     y_domain,
     color_domain,
     color_range,
-    dash_range
+    dash_range,
+    show_legend=True
 ):
 
     color = alt.Color(
@@ -288,7 +335,8 @@ def _line_chart(
         scale=alt.Scale(
             domain=color_domain,
             range=color_range
-        )
+        ),
+        legend=alt.Legend(title="Linea") if show_legend else None
     )
 
     stroke_dash = alt.StrokeDash(
@@ -342,6 +390,64 @@ def _line_chart(
         .properties(
             height=340
         )
+    )
+
+
+def _show_line_legend(items):
+
+    legend_items = []
+
+    for item in items:
+
+        legend_items.append(
+            '<span class="chart-legend-item">'
+            '<span class="chart-legend-line" '
+            f'style="border-top-color: {item["color"]}; '
+            f'border-top-style: {item["style"]};"></span>'
+            f'<span>{item["label"]}</span>'
+            '</span>'
+        )
+
+    legend_css = dedent("""
+    <style>
+    .chart-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 10px;
+        margin-bottom: 14px;
+    }
+
+    .chart-legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        white-space: nowrap;
+    }
+
+    .chart-legend-line {
+        display: inline-block;
+        width: 28px;
+        border-top-width: 3px;
+    }
+    </style>
+    """).strip()
+
+    legend_html = (
+        '<div class="chart-legend">\n'
+        + "\n".join(legend_items)
+        + '\n</div>'
+    )
+
+    st.markdown(
+        legend_css,
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        legend_html,
+        unsafe_allow_html=True
     )
 
 

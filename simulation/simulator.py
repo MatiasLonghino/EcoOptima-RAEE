@@ -128,6 +128,9 @@ class Simulator:
         "DAILY_BASE_LABOR_COST_HISTORY",
         "DAILY_LABOR_COST_HISTORY",
         "DAILY_OVERTIME_EXTRA_COST_HISTORY",
+        "OVERTIME_ACTIVE_DAILY_HISTORY",
+        "OVERTIME_SCHEDULED_NEXT_DAY_HISTORY",
+        "OVERTIME_CRITICAL_THRESHOLD_HISTORY",
     )
 
     HISTORY_ALIASES = {
@@ -166,7 +169,8 @@ class Simulator:
         )
 
         monitor_id = 0
-        overtime_next_day = False
+        critical_threshold_units = self._critical_threshold_units()
+        overtime_scheduled_for_next_day = False
         violations = []
 
         for _ in range(self.config.initial_inventory):
@@ -186,6 +190,10 @@ class Simulator:
         )
 
         for day in range(1, self.config.days + 1):
+
+            overtime_active_today = (
+                overtime_scheduled_for_next_day
+            )
 
             arrivals = self._generate_arrivals(rng)
 
@@ -268,7 +276,7 @@ class Simulator:
 
             overtime_extra_cost = 0
 
-            if overtime_next_day:
+            if overtime_active_today:
 
                 daily_minutes += self.config.overtime_minutes
 
@@ -402,13 +410,20 @@ class Simulator:
                 overtime_extra_cost
             )
 
-            threshold = (
-                self.config.inventory_capacity
-                * self.config.threshold_percentage
+            stats.overtime_active_history.append(
+                overtime_active_today
             )
 
-            overtime_next_day = (
-                inventory_level >= threshold
+            overtime_scheduled_for_next_day = (
+                storage_inventory >= critical_threshold_units
+            )
+
+            stats.overtime_scheduled_next_day_history.append(
+                overtime_scheduled_for_next_day
+            )
+
+            stats.overtime_threshold_history.append(
+                critical_threshold_units
             )
 
         final_inventory = self._system_inventory(
@@ -510,6 +525,7 @@ class Simulator:
                 overtime_percentage,
                 2
             ),
+            "CRITICAL_THRESHOLD_UNITS": critical_threshold_units,
 
             "IS_ACCEPTED": False,
             "REJECTION_REASONS": [],
@@ -548,6 +564,12 @@ class Simulator:
                 stats.daily_labor_cost_history,
             "DAILY_OVERTIME_EXTRA_COST_HISTORY":
                 stats.daily_overtime_extra_cost_history,
+            "OVERTIME_ACTIVE_DAILY_HISTORY":
+                stats.overtime_active_history,
+            "OVERTIME_SCHEDULED_NEXT_DAY_HISTORY":
+                stats.overtime_scheduled_next_day_history,
+            "OVERTIME_CRITICAL_THRESHOLD_HISTORY":
+                stats.overtime_threshold_history,
         }
 
         self._add_legacy_result_keys(
@@ -688,6 +710,10 @@ class Simulator:
             aggregated["PHYSICAL_DEPOT_HISTORY"]
         )
 
+        physical_depot_stats = daily_history_stats[
+            "PHYSICAL_DEPOT_HISTORY"
+        ]
+
         cost_trend = calculate_linear_trend(
             aggregated["DAYS"],
             aggregated["COST_HISTORY"]
@@ -696,6 +722,10 @@ class Simulator:
         aggregated.update({
             "PHYSICAL_DEPOT_AVERAGE_HISTORY":
                 aggregated["PHYSICAL_DEPOT_HISTORY"],
+            "PHYSICAL_DEPOT_MIN_HISTORY":
+                physical_depot_stats["MIN"],
+            "PHYSICAL_DEPOT_MAX_HISTORY":
+                physical_depot_stats["MAX"],
             "PHYSICAL_DEPOT_TREND_HISTORY":
                 physical_depot_trend["TREND_VALUES"],
             "PHYSICAL_DEPOT_TREND_SLOPE":
@@ -838,6 +868,13 @@ class Simulator:
             rng.poisson(
                 self.config.arrival_lambda
             )
+        )
+
+    def _critical_threshold_units(self):
+
+        return (
+            self.config.inventory_capacity
+            * self.config.threshold_percentage
         )
 
     def _system_inventory(self, stores, stats):
