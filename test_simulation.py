@@ -174,7 +174,7 @@ class TestMultipleRuns(unittest.TestCase):
             result_b
         )
 
-    def test_run_multiple_uses_expected_seeds_and_does_not_concatenate_days(self):
+    def test_run_multiple_uses_base_seed_for_every_run_and_does_not_concatenate_days(self):
 
         config = SimulationConfig(
             days=5,
@@ -195,7 +195,34 @@ class TestMultipleRuns(unittest.TestCase):
                 result["SEED"]
                 for result in experiment["RUN_RESULTS"]
             ],
-            [101, 102, 103]
+            [100, 100, 100]
+        )
+
+        reference = dict(
+            experiment["RUN_RESULTS"][0]
+        )
+        reference.pop("RUN_ID")
+
+        for result in experiment["RUN_RESULTS"][1:]:
+
+            comparable = dict(result)
+            comparable.pop("RUN_ID")
+
+            self.assertEqual(
+                comparable,
+                reference
+            )
+
+        repeated_experiment = Simulator(config).run_multiple()
+
+        self.assertEqual(
+            repeated_experiment["RUN_RESULTS"],
+            experiment["RUN_RESULTS"]
+        )
+
+        self.assertEqual(
+            repeated_experiment["AGGREGATED_RESULTS"],
+            experiment["AGGREGATED_RESULTS"]
         )
 
         self.assertEqual(
@@ -562,12 +589,12 @@ class TestCsvExporters(unittest.TestCase):
             experiment["SCENARIO_ID"]
         )
 
-    def test_ten_run_csv_has_ten_rows_and_distinct_seeds(self):
+    def test_ten_run_csv_has_ten_rows_and_repeated_base_seed(self):
 
         config = SimulationConfig(
             days=2,
             runs=10,
-            base_seed=100
+            base_seed=1
         )
 
         experiment = Simulator(config).run_multiple()
@@ -583,14 +610,23 @@ class TestCsvExporters(unittest.TestCase):
         )
 
         self.assertEqual(
-            len(set(seeds)),
-            10
+            seeds,
+            [1] * 10
         )
 
-        self.assertEqual(
-            seeds,
-            list(range(101, 111))
-        )
+        metric_columns = [
+            "TOTAL_COST",
+            "BLOCKED_PERCENTAGE_PCT",
+            "OVERTIME_PERCENTAGE_PCT",
+            "FINAL_TOTAL_INVENTORY",
+        ]
+
+        for column in metric_columns:
+
+            self.assertEqual(
+                dataframes["runs"][column].nunique(),
+                1
+            )
 
     def test_exported_parameters_match_executed_config_snapshot(self):
 
