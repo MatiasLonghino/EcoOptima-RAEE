@@ -42,6 +42,9 @@ class Statistics:
     daily_base_labor_cost_history: list = field(default_factory=list)
     daily_labor_cost_history: list = field(default_factory=list)
     daily_overtime_extra_cost_history: list = field(default_factory=list)
+    overtime_active_history: list = field(default_factory=list)
+    overtime_scheduled_next_day_history: list = field(default_factory=list)
+    overtime_threshold_history: list = field(default_factory=list)
 
     # Series temporales de admisión al depósito
     admitted_history: list = field(default_factory=list)

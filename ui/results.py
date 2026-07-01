@@ -99,6 +99,15 @@ def show_results(results):
             hide_index=True
         )
 
+    with st.expander("Detalle diario por corrida"):
+        st.dataframe(
+            _build_daily_detail_dataframe(
+                run_results
+            ),
+            use_container_width=True,
+            hide_index=True
+        )
+
 
 def _show_rejection_reasons(acceptance_summary):
 
@@ -174,5 +183,66 @@ def _build_run_detail_dataframe(run_results):
             "Horas extra": result["OVERTIME_PERCENTAGE"],
             "Motivos de rechazo": rejection_reasons or "-",
         })
+
+    return pd.DataFrame(rows)
+
+
+def _build_daily_detail_dataframe(run_results):
+
+    rows = []
+
+    for result in run_results:
+
+        days = result["DAYS"]
+        physical_history = result["PHYSICAL_DEPOT_HISTORY"]
+        system_history = result["INVENTORY_HISTORY"]
+        active_history = result.get(
+            "OVERTIME_ACTIVE_DAILY_HISTORY",
+            [False] * len(days)
+        )
+        scheduled_history = result.get(
+            "OVERTIME_SCHEDULED_NEXT_DAY_HISTORY",
+            [False] * len(days)
+        )
+        threshold_history = result.get(
+            "OVERTIME_CRITICAL_THRESHOLD_HISTORY",
+            [
+                result.get("CRITICAL_THRESHOLD_UNITS")
+            ] * len(days)
+        )
+        overtime_cost_history = result.get(
+            "DAILY_OVERTIME_EXTRA_COST_HISTORY",
+            [0] * len(days)
+        )
+
+        history_length = min(
+            len(days),
+            len(physical_history),
+            len(system_history),
+            len(active_history),
+            len(scheduled_history),
+            len(threshold_history),
+            len(overtime_cost_history)
+        )
+
+        for index in range(history_length):
+
+            rows.append({
+                "Corrida": result["RUN_ID"],
+                "Semilla": result["SEED"],
+                "Dia": days[index],
+                "Inventario fisico cierre":
+                    physical_history[index],
+                "Inventario sistema cierre":
+                    system_history[index],
+                "Umbral critico":
+                    threshold_history[index],
+                "Turno extra activo":
+                    "Si" if active_history[index] else "No",
+                "Programa turno siguiente":
+                    "Si" if scheduled_history[index] else "No",
+                "Costo extra diario":
+                    overtime_cost_history[index],
+            })
 
     return pd.DataFrame(rows)

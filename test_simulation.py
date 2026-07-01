@@ -29,6 +29,49 @@ class PlantModelWithoutProcessing:
         pass
 
 
+class PlantModelDrainsAfterFirstDay:
+    """
+    Modelo ficticio que empieza a vaciar el deposito despues
+    del primer dia base de trabajo.
+    """
+
+    def __init__(
+        self,
+        env,
+        stores,
+        config,
+        stats,
+        rng
+    ):
+
+        self.env = env
+        self.stores = stores
+        self.config = config
+        self.stats = stats
+
+        env.process(
+            self.drain_inventory()
+        )
+
+    def drain_inventory(self):
+
+        yield self.env.timeout(
+            self.config.workday_minutes + 0.1
+        )
+
+        while True:
+
+            monitor = yield self.stores.inventory.get()
+
+            self.stats.in_triage += 1
+
+            yield self.env.timeout(1)
+
+            self.stats.in_triage -= 1
+            monitor.processed = True
+            self.stats.processed_irrecoverable += 1
+
+
 class TestStorageCapacity(unittest.TestCase):
     """
     Pruebas automaticas de la capacidad fisica del deposito.
@@ -148,6 +191,249 @@ class TestStorageCapacity(unittest.TestCase):
                     len(result["PHYSICAL_DEPOT_HISTORY"]),
                     config.days
                 )
+
+
+class TestOvertimeProtocol(unittest.TestCase):
+
+    def test_total_system_inventory_does_not_trigger_overtime(self):
+
+        config = SimulationConfig(
+            days=2,
+            inventory_capacity=100,
+            threshold_percentage=0.70,
+            initial_inventory=0,
+            arrival_lambda=0,
+            triage_servers=1,
+            crt_servers=1,
+            lcd_servers=1
+        )
+
+        simulator = Simulator(config)
+
+        with patch(
+            "simulation.simulator.PlantModel",
+            PlantModelWithoutProcessing
+        ), patch.object(
+            Simulator,
+            "_generate_arrivals",
+            side_effect=[60, 0]
+        ), patch.object(
+            Simulator,
+            "_system_inventory",
+            side_effect=[100, 100, 60]
+        ):
+
+            result = simulator.run_single(seed=1)
+
+        self.assertEqual(
+            result["PHYSICAL_DEPOT_HISTORY"],
+            [60, 60]
+        )
+
+        self.assertEqual(
+            result["OVERTIME_ACTIVE_DAILY_HISTORY"],
+            [False, False]
+        )
+
+        self.assertEqual(
+            result["OVERTIME_SCHEDULED_NEXT_DAY_HISTORY"],
+            [False, False]
+        )
+
+        self.assertEqual(
+            result["OVERTIME_DAYS_USED"],
+            0
+        )
+
+        self.assertEqual(
+            result["OVERTIME_PERCENTAGE"],
+            0.0
+        )
+
+    def test_overtime_active_today_depends_on_previous_day_threshold(self):
+
+        config = SimulationConfig(
+            days=3,
+            inventory_capacity=10,
+            threshold_percentage=0.50,
+            initial_inventory=0,
+            arrival_lambda=0,
+            triage_servers=1,
+            crt_servers=1,
+            lcd_servers=1
+        )
+
+        with patch(
+            "simulation.simulator.PlantModel",
+            PlantModelWithoutProcessing
+        ), patch.object(
+            Simulator,
+            "_generate_arrivals",
+            side_effect=[5, 0, 0]
+        ):
+
+            result = Simulator(config).run_single(seed=2)
+
+        self.assertEqual(
+            result["CRITICAL_THRESHOLD_UNITS"],
+            5
+        )
+
+        self.assertEqual(
+            result["OVERTIME_ACTIVE_DAILY_HISTORY"],
+            [False, True, True]
+        )
+
+        self.assertEqual(
+            result["OVERTIME_SCHEDULED_NEXT_DAY_HISTORY"],
+            [True, True, True]
+        )
+
+        self.assertEqual(
+            result["OVERTIME_DAYS_USED"],
+            2
+        )
+
+        self.assertEqual(
+            result["OVERTIME_PERCENTAGE"],
+            66.67
+        )
+
+    def test_overtime_schedule_is_recalculated_to_false(self):
+
+        config = SimulationConfig(
+            days=3,
+            inventory_capacity=10,
+            threshold_percentage=0.50,
+            initial_inventory=0,
+            arrival_lambda=0,
+            triage_servers=1,
+            crt_servers=1,
+            lcd_servers=1
+        )
+
+        with patch(
+            "simulation.simulator.PlantModel",
+            PlantModelDrainsAfterFirstDay
+        ), patch.object(
+            Simulator,
+            "_generate_arrivals",
+            side_effect=[5, 0, 0]
+        ):
+
+            result = Simulator(config).run_single(seed=3)
+
+        self.assertEqual(
+            result["PHYSICAL_DEPOT_HISTORY"],
+            [5, 0, 0]
+        )
+
+        self.assertEqual(
+            result["OVERTIME_ACTIVE_DAILY_HISTORY"],
+            [False, True, False]
+        )
+
+        self.assertEqual(
+            result["OVERTIME_SCHEDULED_NEXT_DAY_HISTORY"],
+            [True, False, False]
+        )
+
+        self.assertEqual(
+            result["OVERTIME_DAYS_USED"],
+            1
+        )
+
+    def test_seed_280578388_overtime_trace_is_consistent(self):
+
+        config = SimulationConfig(
+            runs=1,
+            base_seed=280578388
+        )
+
+        experiment = Simulator(config).run_multiple()
+        repeated_experiment = Simulator(config).run_multiple()
+
+        result = experiment["RUN_RESULTS"][0]
+
+        self.assertEqual(
+            repeated_experiment["RUN_RESULTS"],
+            experiment["RUN_RESULTS"]
+        )
+
+        self.assertEqual(
+            result["SEED"],
+            280578388
+        )
+
+        threshold = result["CRITICAL_THRESHOLD_UNITS"]
+        physical_history = result["PHYSICAL_DEPOT_HISTORY"]
+        active_history = result["OVERTIME_ACTIVE_DAILY_HISTORY"]
+        scheduled_history = result[
+            "OVERTIME_SCHEDULED_NEXT_DAY_HISTORY"
+        ]
+
+        self.assertEqual(
+            len(active_history),
+            config.days
+        )
+
+        self.assertEqual(
+            len(scheduled_history),
+            config.days
+        )
+
+        for index, active_today in enumerate(active_history):
+
+            self.assertEqual(
+                scheduled_history[index],
+                physical_history[index] >= threshold
+            )
+
+            if index == 0:
+                self.assertFalse(active_today)
+                continue
+
+            if active_today:
+                self.assertGreaterEqual(
+                    physical_history[index - 1],
+                    threshold
+                )
+
+                self.assertTrue(
+                    scheduled_history[index - 1]
+                )
+
+        overtime_days = sum(active_history)
+
+        self.assertEqual(
+            result["OVERTIME_DAYS_USED"],
+            overtime_days
+        )
+
+        self.assertEqual(
+            result["OVERTIME_PERCENTAGE"],
+            round(
+                (overtime_days / config.days) * 100,
+                2
+            )
+        )
+
+        if not any(
+            inventory >= threshold
+            for inventory in physical_history
+        ):
+
+            self.assertEqual(
+                result["OVERTIME_PERCENTAGE"],
+                0.0
+            )
+
+        if result["OVERTIME_PERCENTAGE"] == 0:
+
+            self.assertNotIn(
+                "Dependencia excesiva de horas extra.",
+                result["REJECTION_REASONS"]
+            )
 
 
 class TestMultipleRuns(unittest.TestCase):
@@ -744,6 +1030,40 @@ class TestCsvExporters(unittest.TestCase):
                 run_days,
                 [1, 2, 3, 4, 5]
             )
+
+        expected_columns = [
+            "CRITICAL_THRESHOLD_UNITS",
+            "OVERTIME_TRIGGER_PHYSICAL_INVENTORY",
+            "OVERTIME_TRIGGER_REACHED_THRESHOLD",
+            "PREVIOUS_DAY_PHYSICAL_DEPOT_INVENTORY",
+            "PREVIOUS_DAY_REACHED_THRESHOLD",
+            "DAILY_OVERTIME_EXTRA_COST",
+            "OVERTIME_ACTIVE_TODAY",
+            "OVERTIME_SCHEDULED_FOR_NEXT_DAY",
+            "OVERTIME_USED",
+        ]
+
+        for column in expected_columns:
+
+            self.assertIn(
+                column,
+                daily_df.columns
+            )
+
+        first_result = experiment["RUN_RESULTS"][0]
+        first_run_rows = daily_df[
+            daily_df["RUN_ID"] == 1
+        ]
+
+        self.assertEqual(
+            first_run_rows["OVERTIME_ACTIVE_TODAY"].tolist(),
+            first_result["OVERTIME_ACTIVE_DAILY_HISTORY"]
+        )
+
+        self.assertEqual(
+            first_run_rows["OVERTIME_USED"].tolist(),
+            first_result["OVERTIME_ACTIVE_DAILY_HISTORY"]
+        )
 
     def test_rejection_reasons_and_violations_are_joined_as_text(self):
 

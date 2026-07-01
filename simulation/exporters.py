@@ -152,6 +152,28 @@ def build_daily_history_dataframe(
                 result["COST_HISTORY"],
             "DAILY_OVERTIME_EXTRA_COST":
                 result["DAILY_OVERTIME_EXTRA_COST_HISTORY"],
+            "OVERTIME_ACTIVE_TODAY":
+                result.get(
+                    "OVERTIME_ACTIVE_DAILY_HISTORY",
+                    [
+                        cost > 0
+                        for cost in result[
+                            "DAILY_OVERTIME_EXTRA_COST_HISTORY"
+                        ]
+                    ]
+                ),
+            "OVERTIME_SCHEDULED_FOR_NEXT_DAY":
+                result.get(
+                    "OVERTIME_SCHEDULED_NEXT_DAY_HISTORY",
+                    [False] * len(result["DAYS"])
+                ),
+            "CRITICAL_THRESHOLD_UNITS":
+                result.get(
+                    "OVERTIME_CRITICAL_THRESHOLD_HISTORY",
+                    [
+                        result.get("CRITICAL_THRESHOLD_UNITS")
+                    ] * len(result["DAYS"])
+                ),
         }
 
         history_length = min(
@@ -170,6 +192,12 @@ def build_daily_history_dataframe(
             irrecoverable_processed = histories[
                 "IRRECOVERABLE_PROCESSED_CUMULATIVE"
             ][index]
+            physical_inventory = histories[
+                "PHYSICAL_DEPOT_INVENTORY"
+            ][index]
+            overtime_scheduled = histories[
+                "OVERTIME_SCHEDULED_FOR_NEXT_DAY"
+            ][index]
 
             rows.append({
                 "SCENARIO_ID": scenario_id,
@@ -179,9 +207,27 @@ def build_daily_history_dataframe(
                 "SEED": result["SEED"],
                 "DAY": histories["DAYS"][index],
                 "PHYSICAL_DEPOT_INVENTORY":
-                    histories["PHYSICAL_DEPOT_INVENTORY"][index],
+                    physical_inventory,
                 "TOTAL_SYSTEM_INVENTORY":
                     histories["TOTAL_SYSTEM_INVENTORY"][index],
+                "CRITICAL_THRESHOLD_UNITS":
+                    histories["CRITICAL_THRESHOLD_UNITS"][index],
+                "OVERTIME_TRIGGER_PHYSICAL_INVENTORY":
+                    physical_inventory,
+                "OVERTIME_TRIGGER_REACHED_THRESHOLD":
+                    overtime_scheduled,
+                "PREVIOUS_DAY_PHYSICAL_DEPOT_INVENTORY": (
+                    None
+                    if index == 0
+                    else histories["PHYSICAL_DEPOT_INVENTORY"][index - 1]
+                ),
+                "PREVIOUS_DAY_REACHED_THRESHOLD": (
+                    None
+                    if index == 0
+                    else histories[
+                        "OVERTIME_SCHEDULED_FOR_NEXT_DAY"
+                    ][index - 1]
+                ),
                 "ADMITTED_EQUIPMENT_DAILY":
                     histories["ADMITTED_EQUIPMENT_DAILY"][index],
                 "BLOCKED_EQUIPMENT_DAILY":
@@ -197,9 +243,14 @@ def build_daily_history_dataframe(
                 ),
                 "COST_CUMULATIVE":
                     histories["COST_CUMULATIVE"][index],
+                "DAILY_OVERTIME_EXTRA_COST":
+                    histories["DAILY_OVERTIME_EXTRA_COST"][index],
+                "OVERTIME_ACTIVE_TODAY":
+                    histories["OVERTIME_ACTIVE_TODAY"][index],
+                "OVERTIME_SCHEDULED_FOR_NEXT_DAY":
+                    overtime_scheduled,
                 "OVERTIME_USED": (
-                    histories["DAILY_OVERTIME_EXTRA_COST"][index]
-                    > 0
+                    histories["OVERTIME_ACTIVE_TODAY"][index]
                 ),
             })
 
