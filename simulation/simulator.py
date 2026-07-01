@@ -795,7 +795,7 @@ class Simulator:
             return int(seed)
 
         if self.config.base_seed is not None:
-            return int(self.config.base_seed) + int(run_id)
+            return int(self.config.base_seed)
 
         return self._random_seeds(1)[0]
 
@@ -803,8 +803,8 @@ class Simulator:
 
         if base_seed is not None:
             return [
-                int(base_seed) + run_id
-                for run_id in range(1, runs + 1)
+                int(base_seed)
+                for _ in range(runs)
             ]
 
         return self._random_seeds(runs)
